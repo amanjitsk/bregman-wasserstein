@@ -1,0 +1,23 @@
+[tool.pyright]
+
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportIncompatibleMethodOverride = "warning"
+
+pythonVersion = "3.10"
+pythonPlatform = "Linux"
+
+[tool.ruff]
+# Always generate Python 3.10-compatible code.
+target-version = "py310"
+
+[tool.ruff.lint]
+# E371: lambda functions
+# F722: jaxtyping multi-dimensional arrays
+ignore = ["E731", "F722"]
+# Disable fix for unused imports (`F401`).
+unfixable = ["F401"]
+
+[tool.ruff.format]
+# Enable reformatting of code snippets in docstrings.
+docstring-code-format = true

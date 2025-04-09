@@ -1,0 +1,16 @@
+# vim: set filetype=conf:
+fire              # command line parsing
+tqdm              # progress bar
+black             # formatter
+ruff              # formatter
+jax[cuda12]       # jax w/ prebuilt CUDA and CUDNN
+jaxtyping         # type annotations
+equinox           # ML/NN
+distrax           # ML/NN
+optax             # ML/NN
+pcax              # ML/NN
+jaxopt            # ML/NN
+typing-extensions # for equinox
+matplotlib        # for plotting
+seaborn           # for plotting
+scikit-learn      # datasets
