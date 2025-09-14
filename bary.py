@@ -155,11 +155,11 @@ def random_measures(
 
 def simplex(
     num_marginals: int = 8,
-    num_particles: int = 1000,
+    num_particles: int = 250,
     epsilon: float = 1e-2,
-    a0: float = 50.0,
+    a0: float = 100.0,
     dry: bool = False,
-    plot_samples: bool = True,
+    plot_samples: bool = False,
     save: bool = False,
 ):
     """Barycenters on the Simplex."""
@@ -247,9 +247,10 @@ def simplex(
     fig, subfigs, axes = pu.make_figure(nrows, ncols, 3)
     labels, colors = [], []
     names_map = dict(
-        simplexkl="Negentropy (left)",
-        simplexkl_dual="Negentropy (right)",
-        euclidean=r"Quadratic",
+        SimplexKL="Negentropy (left)",
+        SimplexKL_dual="Negentropy (right)",
+        Euclidean=r"Quadratic",
+        ScaledEuclidean=r"Quadratic",
     )
 
     for i, endpoints in enumerate(points):
