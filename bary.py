@@ -204,6 +204,8 @@ def simplex(
             dax,
             dual_samples,
             density=jax.vmap(dual_dist.prob),
+            # density=None,
+            # kde=True,
             sample=plot_samples,
             scatter_kw=scatter_kw,
             format_kw=None,  # don't format here
@@ -212,6 +214,7 @@ def simplex(
             ylim=dlim,
             marginals=True,
             levels=NUM_LEVELS,
+            # coverage=0.99,
             color=color,
             **kwargs,
         )
@@ -247,10 +250,12 @@ def simplex(
     fig, subfigs, axes = pu.make_figure(nrows, ncols, 3)
     labels, colors = [], []
     names_map = dict(
-        SimplexKL="Negentropy (left)",
+        # SimplexKL="Negentropy (left)",
+        SimplexKL=r"$\Omega(x) = \sum_i x_i \log x_i$",
         SimplexKL_dual="Negentropy (right)",
         Euclidean=r"Quadratic",
-        ScaledEuclidean=r"Quadratic",
+        # ScaledEuclidean=r"Quadratic",
+        ScaledEuclidean=r"$\Omega(x) = \frac{1}{2} \sum_i x_i^2$",
     )
 
     for i, endpoints in enumerate(points):
@@ -272,7 +277,7 @@ def simplex(
         for samples, marginal in zip(particles, measures):
             plot(axs, samples, marginal, color="k", cmap="Greys")
         if i == 0:
-            labels.append("Marginals")
+            labels.append(r"$\mu_i$")
             colors.append("k")
 
         if not dry:
@@ -287,6 +292,7 @@ def simplex(
                 )
                 color = f"C{cid}"
                 cmap = pu.linear_cmap(colors=["white", color], name=cost_fn.name)
+                # cmap = pu.tcmap(color, "white")
                 plot(axs, bar, None, color=color, cmap=cmap)
                 if i == 0:
                     labels.append(names_map[cost_fn.name])
@@ -481,8 +487,6 @@ def hypercube(
 
 def unidimensional(n_interp: int = 11, dry: bool = False, verbose: bool = False):
     """GMM barycenters in 1d."""
-    import image_data
-
     key = jr.key(0)
     dim = 1
     x_dim = dim * (dim + 1)

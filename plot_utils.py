@@ -116,7 +116,7 @@ def latexify(fig_width=None, fig_height=None, columns=1):
         # "backend": "Qt5Agg",
         "text.latex.preamble": "\n".join(
             [
-                r"\usepackage{amssymb,amsthm,amscd,empheq,amsmath}",
+                r"\usepackage{amssymb,amsthm,amscd,empheq,amsmath,bm}",
                 r"\def\grad{\bm{\nabla}}",
                 r"\def\primal{\mathcal{X}}",
                 r"\def\dual{\mathcal{Y}}",
@@ -758,6 +758,7 @@ def draw_2dcontours(
         kwargs["vmax"] = vmax
         levels = kwargs.pop("levels", 20 if filled else 12)
         kwargs["levels"] = np.linspace(vmin, vmax, levels)
+        print(f"{vmin=}, {vmax=}, {kwargs['levels']=}")
 
     if debug and not jnp.isfinite(Z).all().item():
         idx = ~jnp.isfinite(Z)
@@ -977,6 +978,10 @@ def linear_cmap(colors, nodes=None, name="mycmap"):
 
 def unicmap(color, alpha=0.0):
     return linear_cmap([to_rgba(color, alpha), color])
+
+
+def tcmap(color, white="white"):
+    return linear_cmap([to_rgba(white, 0.0), color])
 
 
 def nested_cmaps(cmap, n_cmaps):
@@ -1867,6 +1872,7 @@ def plot_transport(
     If source samples mapped by the fitted map are provided in ``batch``,
     the function plots these predictions as well.
     """
+    fontsize = 24
     rng = jax.random.key(0) if rng is None else rng
     if num_points is None:
         subsample = jnp.arange(len(batch["source"]))
@@ -1956,8 +1962,8 @@ def plot_transport(
         )
         compute_lims(jnp.concat((source, target), axis=0), margin=margin, ax=ax)
     else:
-        sax.set_title("Source")
-        tax.set_title("Target")
+        sax.set_title(r"$\mu_0$", fontsize=fontsize)
+        tax.set_title(r"$\mu_1$", fontsize=fontsize)
         sax.set_axis_off()
         tax.set_axis_off()
         axison = sax.axison and tax.axison
@@ -1965,7 +1971,9 @@ def plot_transport(
             **{
                 "ncol": legend_ncol,
                 "loc": "outside lower center",
-                "bbox_to_anchor": (0.5, -0.05),
+                "bbox_to_anchor": (0.5, -0.1),
+                "fontsize": 20,
+                "markerscale": 3,
                 # "loc": "upper center",
                 # "bbox_to_anchor": (0.5, 0.05),
             }
@@ -2015,9 +2023,9 @@ class BOTVisualizer(object):
 
     def map_label(self, forward: bool):
         if self.ddi:
-            label = r"Df" if forward else r"Df^*"
+            label = r"\grad\phi" if forward else r"\grad\phi^*"
         else:
-            label = r"Dh" if forward else r"Dh^*"
+            label = r"\grad\psi" if forward else r"\grad\psi^*"
         return rf"$({label})_{{\#}}$"
 
     @staticmethod
@@ -2256,12 +2264,14 @@ def format_returns_axis(ax, **kwargs):
 
 if __name__ == "__main__":
     from subprocess import run
+    head = Path("plot")
 
     def make_visualizer(dset: str, cost: costs.AbstractBregman, ddi: bool):
+        domain = "vanilla"
         prefix = "ddi" if ddi else "pdi"
-        fname = Path("neural").joinpath(f"{prefix}_{dset}_{cost.name}_summary.npy")
+        fname = head.joinpath(f"{domain}_{prefix}_{dset}_{cost.name}_summary.npy")
         if not fname.exists():
-            raise ValueError
+            raise ValueError(f"File {fname} does not exist.")
         data = jnp.load(fname, allow_pickle=True).item()
         return BOTVisualizer(cost, data)
 
@@ -2273,13 +2283,13 @@ if __name__ == "__main__":
     labels = dict()
     cost_fns = []
     cost_fns.append(costs.Euclidean())
-    labels[cost_fns[-1].name] = r"\frac{1}{2 }(x^i)^2"
+    labels[cost_fns[-1].name] = r"\frac{1}{2}(x_i)^2"
     cost_fns.append(costs.ExtendedKL(a=1.0).dualized())
-    labels[cost_fns[-1].name] = r"\exp(x^i)"
+    labels[cost_fns[-1].name] = r"\exp(x_i)"
     cost_fns.append(costs.ExtendedKL(a=-1.0).dualized())
-    labels[cost_fns[-1].name] = r"\exp(-x^i)"
+    labels[cost_fns[-1].name] = r"\exp(-x_i)"
     cost_fns.append(costs.HNNTanh(beta=1.0).dualized())
-    labels[cost_fns[-1].name] = r"\frac{1}{2} \log(1 + \exp(2x^i))"
+    labels[cost_fns[-1].name] = r"\frac{1}{2} \log(1 + \exp(2x_i))"
 
     def name(
         cost: Optional[costs.AbstractBregman],
@@ -2299,9 +2309,10 @@ if __name__ == "__main__":
             fname = f"{dset}_{info}_{'paths' if paths else 'samples'}"
         else:
             fname = f"{dset}_{info}_{cost.name}"
-        return Path("neural").joinpath(f"{fname}.{suffix}")
+        return head.joinpath(f"{fname}.{suffix}")
 
     def plot_all(dset: str, ddi: bool, forward: bool, paths: bool, pdf: bool = False):
+        fontsize = 24
         visualizers = []
         for cost_fn in cost_fns:
             visualizers.append(make_visualizer(dset, cost_fn, ddi=ddi))
@@ -2313,27 +2324,27 @@ if __name__ == "__main__":
         )
         for ax, visualizer in zip(axes, visualizers):
             label = labels[visualizer.bregman.name]
-            title = rf"$\Omega_i(x^i) = {label}$"
+            title = rf"$\Omega(x_i) = {label}$"
             sfig = plot(visualizer, forward=forward, ax=ax, paths=paths)
             # sfig.legends[0].set_title(title)
             # sfig.suptitle(title)
             fname = name(visualizer.bregman, dset, ddi, forward, paths, pdf=pdf)
             sfig.savefig(fname, bbox_inches="tight")
             plt.close(sfig)
-            ax.set_title(title)
+            ax.set_title(title, fontsize=fontsize)
 
         if ddi:
             if forward:
-                label = r"$\mu_t^{\primal} = (D\Omega^* \circ ((1-t)D\Omega + tDf))_{\#} \mu_0^{\primal}$"
+                label = r"$\mu_t^{\primal} = (\grad\Omega^* \circ ((1-t)\grad\Omega + t\grad\phi))_{\#} \mu_0^{\primal}$"
             else:
                 label = (
-                    r"$\mu_t^{\primal} = (tD\Omega^* + (1-t)Df^*)_{\#} \mu_1^{\dual}$"
+                    r"$\mu_t^{\primal} = (t\grad\Omega^* + (1-t)\grad\phi^*)_{\#} \mu_1^{\dual}$"
                 )
         else:
             if forward:
-                label = r"$\mu_t^{\primal} = ((1-t)D\Omega + tDh)_{\#} \mu_0^{\dual}$"
+                label = r"$\mu_t^{\primal} = ((1-t)\grad\Omega + t\grad\psi)_{\#} \mu_0^{\dual}$"
             else:
-                label = r"$\mu_t^{\primal} = (D\Omega^* \circ (tD\Omega + (1-t)Dh^*))_{\#} \mu_1^{\primal}$"
+                label = r"$\mu_t^{\primal} = (D\Omega^* \circ (t\grad\Omega + (1-t)\grad\psi^*))_{\#} \mu_1^{\primal}$"
         if paths:
             handles = create_legend_handles(
                 [label], colors=[PATH_COLOR], bar=False, lw=3, alpha=0.5
@@ -2342,7 +2353,7 @@ if __name__ == "__main__":
                 handles,
                 [label],
                 loc="outside lower center",
-                fontsize=24,
+                fontsize=fontsize,
                 frameon=False,
                 bbox_to_anchor=(0.5, -0.15),
             )
@@ -2377,7 +2388,7 @@ if __name__ == "__main__":
     for dset in DSETS:
         for ddi in [True, False]:
             for forward in [True, False]:
-                for paths in [True, False]:
+                for paths in [True,]:
                     plot_all(dset, ddi, forward, paths, pdf=PDF)
 
     if COMBINE:
